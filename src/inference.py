@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 morph = pymorphy3.MorphAnalyzer()
 
 # 1. Загружаем модель
-model = joblib.load("./models/ai_detector_model.pkl")
+model = joblib.load("./models/ai_detector_logreg_model.pkl")
 
 
 def clean_text(text: str):
@@ -23,7 +23,7 @@ def clean_text(text: str):
     return " ".join(clean_tokens)
 
 
-def predict_text(raw_text):
+def predict_text(raw_text: str):
     cleaned = clean_text(raw_text)
 
     prediction = model.predict([cleaned])[0]
