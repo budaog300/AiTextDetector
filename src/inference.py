@@ -6,7 +6,6 @@ from nltk.tokenize import word_tokenize
 # nltk.download("punkt")
 morph = pymorphy3.MorphAnalyzer()
 
-# 1. Загружаем модель
 model = joblib.load("./models/ai_detector_logreg_model.pkl")
 
 
