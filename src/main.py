@@ -4,13 +4,19 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from src.inference import predict_text
+from src.model_service import BertModelManager, SklearnModelManager
+from src.model_service.service import TextClassificationService
 from src.schemas import TextRequestSchema
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.service = TextClassificationService()
+    app.state.service.initialize("bert", BertModelManager("./models/bert"))
+    app.state.service.initialize("sklearn", SklearnModelManager("./models/sklearn/v2"))
     yield
+    app.state.service.unload("bert")
+    app.state.service.unload("sklearn")
 
 
 app = FastAPI(title="Детектор AI-текстов", lifespan=lifespan)
@@ -41,119 +47,122 @@ async def health():
 @app.get("/client", summary="Клиентский интерфейс приложения")
 async def get_client():
     return HTMLResponse("""
-        <!DOCTYPE html>
-        <html lang="ru">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>AI Text Detector</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-            <style>
-                body { font-family: 'Inter', sans-serif; }
-                .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-            </style>
-        </head>
-        <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-            <div class="max-w-2xl w-full glass p-8 rounded-2xl shadow-2xl border border-slate-200">
-                <h1 class="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-                    🔍 AI Detector
-                </h1>
-                <p class="text-slate-500 mb-6">Проверьте, написан ли текст человеком или нейросетью.</p>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6">
 
-                <textarea id="textInput" 
-                    class="w-full h-48 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none mb-4 text-slate-700"
-                    placeholder="Вставьте текст для анализа (минимум 100 символов)..."></textarea>
+<div class="w-full max-w-2xl bg-white p-6 rounded-2xl shadow">
 
-                <button onclick="analyzeText()" id="btn"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg active:scale-[0.98]">
-                    Проверить текст
-                </button>
+    <h1 class="text-2xl font-bold mb-4">🔍 AI Detector</h1>
 
-                <!-- Блок результатов (скрыт по умолчанию) -->
-                <div id="resultBox" class="mt-8 hidden border-t pt-6">
-                    <div class="flex justify-between items-end mb-2">
-                        <span class="text-sm font-medium text-slate-500">Результат анализа:</span>
-                        <span id="label" class="text-2xl font-bold"></span>
-                    </div>
-                    
-                    <div class="w-full bg-slate-200 rounded-full h-4 mb-2">
-                        <div id="confidenceBar" class="h-4 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                    </div>
-                    
-                    <div class="flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        <span id="confValue">0%</span>
-                    </div>
-                </div>
+    <!-- MANAGER -->
+    <label class="text-sm">Выбор типа модели</label>
+    <select id="manager" class="w-full border p-2 rounded mb-3">
+        <option value="bert">BERT</option>
+        <option value="sklearn">Sklearn</option>
+    </select>
 
-                <div id="loader" class="mt-4 hidden text-center text-blue-600 font-medium animate-pulse">
-                    Анализирую паттерны текста...
-                </div>
-            </div>
+    <!-- MODEL -->
+    <label class="text-sm">Выбор модели</label>
+    <select id="model" class="w-full border p-2 rounded mb-3"></select>
 
-            <script>
-                async function analyzeText() {
-                    const text = document.getElementById('textInput').value;
-                    const btn = document.getElementById('btn');
-                    const resultBox = document.getElementById('resultBox');
-                    const loader = document.getElementById('loader');
-                    const label = document.getElementById('label');
-                    const confBar = document.getElementById('confidenceBar');
-                    const confValue = document.getElementById('confValue');
-                    const text_length = 100;
+    <!-- TEXT -->
+    <textarea id="text" class="w-full h-40 border p-3 rounded mb-3"
+        placeholder="Введите текст..."></textarea>
 
-                    if (text.length < text_length) {
-                        alert('Пожалуйста, введите более длинный текст');
-                        return;
-                    }
+    <button onclick="predict()"
+        class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">
+        Анализировать
+    </button>
 
-                    // Визуальное состояние загрузки
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50');
-                    loader.classList.remove('hidden');
-                    resultBox.classList.add('hidden');
+    <!-- RESULT -->
+    <div id="result" class="mt-5 hidden">
+        <h2 id="label" class="text-xl font-bold"></h2>
+        <p id="conf"></p>
+    </div>
 
-                    try {
-                        // Замени /predict на твой реальный эндпоинт, если он отличается
-                        const response = await fetch('/predict', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: text })
-                        });
+</div>
 
-                        const data = await response.json();
+<script>
 
-                        // Обработка данных
-                        const isAI = data.label === 'AI';
-                        const confidence = (data.confidence * 100).toFixed(1);
+async function loadModels() {
+    const manager = document.getElementById("manager").value;
 
-                        label.innerText = isAI ? '🤖 Это ИИ' : '👨‍💻 Это человек';
-                        label.className = `text-2xl font-bold ${isAI ? 'text-red-600' : 'text-green-600'}`;
-                        
-                        // Настройка прогресс-бара
-                        confValue.innerText = `Уверенность: ${confidence}%`;                        
-                        confBar.style.width = `${confidence}%`;
-                        confBar.className = `h-4 rounded-full transition-all duration-1000 ${isAI ? 'bg-red-500' : 'bg-green-500'}`;
-                        resultBox.classList.remove('hidden');
-                    } catch (error) {
-                        alert('Ошибка при соединении с сервером');
-                        console.error(error);
-                    } finally {
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-50');
-                        loader.classList.add('hidden');
-                    }
-                }
-            </script>
-        </body>
-        </html>
-        """)
+    const res = await fetch(`/models/${manager}`);
+    const data = await res.json();
+
+    const select = document.getElementById("model");
+    select.innerHTML = "";
+
+    if (!data.models) return;
+
+    data.models.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.innerText = m;
+        select.appendChild(opt);
+    });
+}
+
+document.getElementById("manager").addEventListener("change", loadModels);
+
+async function predict() {
+    const text = document.getElementById("text").value;
+    const manager = document.getElementById("manager").value;
+    const model = document.getElementById("model").value;
+
+    const res = await fetch("/predict", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            text: text,
+            manager: manager,
+            model: model
+        })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("result").classList.remove("hidden");
+    document.getElementById("label").innerText = data.label;
+    document.getElementById("conf").innerText =
+        "Confidence: " + (data.confidence * 100).toFixed(1) + "%";
+}
+
+window.onload = async () => {
+    await loadModels();
+};
+
+</script>
+
+</body>
+</html>
+""")
+
+
+@app.get("/managers", summary="Получить все менеджеры")
+async def managers():
+    return app.state.service.get_available_managers()
+
+
+@app.get("/models/{manager_name}", summary="Получить все модели менеджера")
+async def get_models(manager_name: str):
+    return app.state.service.get_manager_models(manager_name)
 
 
 @app.post("/predict", summary="Анализ текста")
 async def predict(data: TextRequestSchema):
-    response = predict_text(data.text)
+    response = app.state.service.predict(
+        manager_name=data.manager,
+        text=data.text,
+        model_name=data.model_name,
+    )
     return response
 
 
