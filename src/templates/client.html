@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Detector</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="/static/client.js"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6">
+
+        <h1 class="text-3xl font-bold text-slate-800 mb-6">
+            🔍 AI Detector
+        </h1>
+
+        <!-- MANAGER -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">
+                Тип модели
+            </label>
+
+            <select id="manager" class="w-full border border-slate-300 rounded-lg p-3">
+                <!-- <option value="bert">BERT</option>
+                <option value="sklearn">SKLEARN</option> -->
+            </select>
+        </div>
+
+        <!-- MODEL -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">
+                Модель
+            </label>
+
+            <select id="model" class="w-full border border-slate-300 rounded-lg p-3"></select>
+        </div>
+
+        <!-- TEXT -->
+        <div class="mb-4">
+            <textarea id="text" class="w-full h-52 border border-slate-300 rounded-lg p-4 resize-none"
+                placeholder="Введите текст..."></textarea>
+        </div>
+
+        <!-- BUTTON -->
+        <button onclick="predictText()" id="predictBtn"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition">
+            Анализировать
+        </button>
+
+        <!-- LOADER -->
+        <div id="loader" class="hidden mt-4 text-blue-600 font-medium">
+            Анализ текста...
+        </div>
+
+        <!-- RESULT -->
+        <div id="result" class="hidden mt-6 border-t pt-6">
+            <h2 id="label" class="text-2xl font-bold mb-2"></h2>
+
+            <div class="w-full bg-slate-200 rounded-full h-4 mb-2">
+                <div id="confidenceBar" class="h-4 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+
+            <p id="confidence" class="text-sm text-slate-600"></p>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
