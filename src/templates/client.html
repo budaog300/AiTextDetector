@@ -45,6 +45,19 @@
                 placeholder="Введите текст..."></textarea>
         </div>
 
+        <!-- TARGET LABEL -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">
+                Целевой класс (необязательно)
+            </label>
+
+            <select id="targetLabel" class="w-full border border-slate-300 rounded-lg p-3">
+                <option value="">Не указано</option>
+                <option value="1">AI</option>
+                <option value="0">Human</option>
+            </select>
+        </div>
+
         <!-- BUTTON -->
         <button onclick="predictText()" id="predictBtn"
             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition">

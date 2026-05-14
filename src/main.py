@@ -76,16 +76,16 @@ async def get_models(manager_name: str):
 @app.post("/predict", summary="Анализ текста")
 async def predict(data: TextRequestSchema, db: SessionDep):
     response = app.state.service.predict(
-        manager_name=data.manager,
+        manager_name=data.manager_name,
         text=data.text,
-        model_name=data.model,
+        model_name=data.model_name,
     )
     predict_data = AddPredictionSchema(
         text=data.text,
         predicted_label=response["label"],
         confidence=response["confidence"],
         manager_name=data.manager_name,
-        model_name=data.model,
+        model_name=data.model_name,
         target_label=data.target_label,
     )
     await crud.add_prediction(predict_data, db)

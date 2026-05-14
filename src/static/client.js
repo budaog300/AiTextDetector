@@ -52,6 +52,12 @@ async function predictText() {
     const text = document.getElementById("text").value;
     const manager = document.getElementById("manager").value;
     const model = document.getElementById("model").value;
+    const targetRaw = document.getElementById("targetLabel").value;
+
+    const target_label =
+        targetRaw === ""
+            ? null
+            : Number(targetRaw);
 
     const loader = document.getElementById("loader");
     const result = document.getElementById("result");
@@ -76,8 +82,9 @@ async function predictText() {
 
             body: JSON.stringify({
                 text: text,
-                manager: manager,
-                model: model
+                manager_name: manager,
+                model_name: model,
+                target_label: target_label
             })
         });
 
