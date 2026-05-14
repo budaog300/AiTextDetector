@@ -105,7 +105,7 @@ class SklearnModelManager(BaseModelManager):
         else:
             X = [cleaned]
 
-        prediction = model.predict(X)[0]
+        pred = model.predict(X)[0]
 
         if hasattr(model, "predict_proba"):
             prob = model.predict_proba(X)[0]
@@ -114,10 +114,10 @@ class SklearnModelManager(BaseModelManager):
             score = model.decision_function(X)[0]
             conf = float(1 / (1 + np.exp(-score)))
 
-        label = "AI" if prediction == 1 else "Human"
-        # conf = probability[1] if prediction == 1 else probability[0]
+        # label = "AI" if pred == 1 else "Human"
+        # conf = probability[1] if pred == 1 else probability[0]
 
-        return {"label": label, "confidence": float(conf)}
+        return {"label": pred, "confidence": float(conf)}
 
     def unload(self):
         self.models.clear()

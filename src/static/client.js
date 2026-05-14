@@ -83,7 +83,7 @@ async function predictText() {
 
         const data = await response.json();
 
-        const isAI = data.label === "AI";
+        const isAI = data.label === 1;
         const confidence = (data.confidence * 100).toFixed(2);
 
         const label = document.getElementById("label");

@@ -62,15 +62,16 @@ class BertModelManager(BaseModelManager):
         pred = int(np.argmax(probs))
         conf = float(np.max(probs))
 
-        label = "AI" if pred == 1 else "Human"
+        # label = "AI" if pred == 1 else "Human"
 
         return {
-            "label": label,
+            "label": pred,
             "confidence": conf,
         }
 
     def unload(self):
         self.models.clear()
         self.tokenizers.clear()
+        self.devices.clear()
         gc.collect()
         torch.cuda.empty_cache()

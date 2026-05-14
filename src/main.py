@@ -8,7 +8,9 @@ from contextlib import asynccontextmanager
 
 from src.model_service import BertModelManager, SklearnModelManager
 from src.model_service.service import TextClassificationService
-from src.schemas import TextRequestSchema
+from src.predictions.schemas import TextRequestSchema, AddPredictionSchema
+import src.predictions.crud as crud
+from src.predictions.deps import SessionDep
 
 
 @asynccontextmanager
@@ -72,12 +74,21 @@ async def get_models(manager_name: str):
 
 
 @app.post("/predict", summary="Анализ текста")
-async def predict(data: TextRequestSchema):
+async def predict(data: TextRequestSchema, db: SessionDep):
     response = app.state.service.predict(
         manager_name=data.manager,
         text=data.text,
         model_name=data.model,
     )
+    predict_data = AddPredictionSchema(
+        text=data.text,
+        predicted_label=response["label"],
+        confidence=response["confidence"],
+        manager_name=data.manager_name,
+        model_name=data.model,
+        target_label=data.target_label,
+    )
+    await crud.add_prediction(predict_data, db)
     return response
 
 
